@@ -55,14 +55,16 @@ public class Eventhandler {
 
 	@SubscribeEvent
 	public void tick(WorldTickEvent event) {
+		if(event.world == null || event.world.loadedTileEntityList == null)
+			return;
 		if (event.phase == Phase.END && event.side == Side.SERVER) {
-			for (TileEntity tile : event.world.loadedTileEntityList) {
+			TileEntity tile = null;
+			for(Iterator<TileEntity> iter = event.world.loadedTileEntityList.iterator(); iter.hasNext(); tile = iter.next()) {
 				if (tile instanceof CommonTile) {
 					if (((CommonTile) tile).needsSync()) {
 						((CommonTile) tile).sync();
 						((CommonTile) tile).setSyncDirty(false);
 					}
-
 				}
 			}
 		}
