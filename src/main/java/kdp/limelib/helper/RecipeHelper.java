@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -24,7 +23,6 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StringUtils;
-import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.ModLoadingContext;
 
 import org.apache.commons.lang3.Validate;
@@ -34,47 +32,52 @@ import kdp.limelib.LimeLib;
 
 public class RecipeHelper {
 
-    private static final Map<String, List<Pair<String, String>>> recipes = new HashMap<>();
+    private static final Map<String, List<Pair<String, Map<String, Object>>>> recipes = new HashMap<>();
+    private static final Map<String, List<Pair<String, Map<String, Object>>>> blockLoottables = new HashMap<>();
+    private static final Map<String, List<Pair<String, Map<String, Object>>>> entityLoottables = new HashMap<>();
+    private static final Map<String, List<Pair<String, Map<String, Object>>>> tags = new HashMap<>();
     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private static final String modIDCurrentFolder;
+
+    static {
+        File folder = new File("").toPath().resolve("../src/main/java/kdp/").toFile();
+        modIDCurrentFolder = folder.list()[0];
+    }
 
     public static void generateFiles() {
         if (!LimeLib.DEV)
             return;
         try {
-            File folder = new File("").toPath().resolve("../src/main/java/kdp/").toFile();
-            final String modIDCurrentFolder = folder.list()[0];
-            for (Entry<String, List<Pair<String, String>>> e : recipes.entrySet()) {
-                if (!modIDCurrentFolder.equals(e.getKey())) {
-                    continue;
-                }
-                boolean notAJar = ModList.get().getModContainerById(e.getKey()).get().getMod().getClass()
-                        .getProtectionDomain().getCodeSource().getLocation() == null;
-                if (notAJar) {
-                    List<String> names = new ArrayList<>();
-                    for (Pair<String, String> p : e.getValue()) {
-                        String name = p.getLeft();
-                        int i = 1;
-                        while (names.contains(name)) {
-                            name = p.getLeft() + i++;
-                        }
-                        names.add(name);
-                    }
-                    File dir = new File("").toPath().resolve("../src/main/resources/data/" + e.getKey() + "/recipes/")
-                            .toFile();
-                    if (!dir.exists())
-                        dir.mkdirs();
-                    for (int i = 0; i < names.size(); i++) {
-                        Files.write(new File(dir, names.get(i) + ".json").toPath(),
-                                e.getValue().get(i).getRight().getBytes());
-                    }
-                }
-            }
+            generateData(recipes.get(modIDCurrentFolder), "recipes");
+            generateData(blockLoottables.get(modIDCurrentFolder), "loot_tables/blocks");
+            generateData(entityLoottables.get(modIDCurrentFolder), "loot_tables/entities");
+            generateData(tags.get(modIDCurrentFolder), "tags");
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private static Object serializeItem2(Object o, boolean count) {
+    private static void generateData(List<Pair<String, Map<String, Object>>> pairs, String folder) throws IOException {
+        List<String> names = new ArrayList<>();
+        for (Pair<String, Map<String, Object>> p : pairs) {
+            String name = p.getLeft();
+            int i = 1;
+            while (names.contains(name)) {
+                name = p.getLeft() + i++;
+            }
+            names.add(name);
+        }
+        File dir = new File("").toPath()
+                .resolve("../src/main/resources/data/" + modIDCurrentFolder + "/" + folder + "/").toFile();
+        if (!dir.exists())
+            dir.mkdirs();
+        for (int i = 0; i < names.size(); i++) {
+            Files.write(new File(dir, names.get(i) + ".json").toPath(),
+                    gson.toJson(pairs.get(i).getRight()).getBytes());
+        }
+    }
+
+    private static Object serializeItem(Object o, boolean count) {
         Objects.requireNonNull(o);
         if (o instanceof String) {
             Map<String, Object> ret = new LinkedHashMap<>();
@@ -101,15 +104,15 @@ public class RecipeHelper {
             Validate.isTrue(!s.isEmpty(), "ItemStack is empty.");
             Map<String, Object> ret = new LinkedHashMap<>();
             ret.put("item", s.getItem().getRegistryName().toString());
-            if (count && s.getCount() > 1)
+            if (count || s.getCount() > 1)
                 ret.put("count", s.getCount());
             return ret;
         }
         if (o instanceof Collection) {
-            return ((Collection<?>) o).stream().map(oo -> serializeItem2(oo, count)).collect(Collectors.toList());
+            return ((Collection<?>) o).stream().map(oo -> serializeItem(oo, count)).collect(Collectors.toList());
         }
         if (o instanceof Object[]) {
-            return Arrays.stream((Object[]) o).map(oo -> serializeItem2(oo, count)).collect(Collectors.toList());
+            return Arrays.stream((Object[]) o).map(oo -> serializeItem(oo, count)).collect(Collectors.toList());
         }
         throw new IllegalArgumentException("Argument of type " + o.getClass().getName() + " is invalid.");
 
@@ -117,7 +120,25 @@ public class RecipeHelper {
 
     private static void validate(ItemStack stack) {
         Validate.isTrue(!stack.isEmpty(), "result must not be empty");
-        //		Validate.isTrue(Loader.instance().hasReachedState(LoaderState.INITIALIZATION), "register after preInit");
+    }
+
+    public static void addBlockLootTable(Block block) {
+        if (!LimeLib.DEV)
+            return;
+
+        Map<String, Object> json = new LinkedHashMap<>();
+    }
+
+    public static void addTag(ResourceLocation tag, ResourceLocation... values) {
+        /*tags.compute(id, (k, v) -> {
+            Pair<String, Map<String, Object>> p = Pair.of(name, json);
+            if (v == null) {
+                return new ArrayList<>(Collections.singletonList(p));
+            } else {
+                v.add(p);
+                return v;
+            }
+        });*/
     }
 
     public static void addCraftingRecipe(ItemStack result, @Nullable String group, boolean shaped, Object... input) {
@@ -148,16 +169,16 @@ public class RecipeHelper {
                 } else {
                     if (curKey == null)
                         throw new IllegalArgumentException("Providing object without a char key");
-                    key.put(Character.toString(curKey), serializeItem2(o, false));
+                    key.put(Character.toString(curKey), serializeItem(o, false));
                     curKey = null;
                 }
             }
             json.put("key", key);
         } else {
             json.put("ingredients",
-                    Arrays.stream(input).map(o -> serializeItem2(o, false)).collect(Collectors.toList()));
+                    Arrays.stream(input).map(o -> serializeItem(o, false)).collect(Collectors.toList()));
         }
-        json.put("result", serializeItem2(result, true));
+        json.put("result", serializeItem(result, true));
         addRecipe(result.getItem().getRegistryName().getPath(), json);
     }
 
@@ -167,7 +188,7 @@ public class RecipeHelper {
         validate(result);
         Map<String, Object> json = new LinkedHashMap<>();
         json.put("type", "smelting");
-        json.put("ingredient", serializeItem2(input, false));
+        json.put("ingredient", serializeItem(input, false));
         json.put("result", result.getItem().getRegistryName().toString());
         json.put("experience", exp);
         json.put("cookingtime", time);
@@ -177,7 +198,7 @@ public class RecipeHelper {
     public static void addRecipe(String name, Map<String, Object> json) {
         String id = ModLoadingContext.get().getActiveContainer().getNamespace();
         recipes.compute(id, (k, v) -> {
-            Pair<String, String> p = Pair.of(name, gson.toJson(json));
+            Pair<String, Map<String, Object>> p = Pair.of(name, json);
             if (v == null) {
                 return new ArrayList<>(Collections.singletonList(p));
             } else {

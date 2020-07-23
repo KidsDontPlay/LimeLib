@@ -2,19 +2,22 @@ package kdp.limelib.helper;
 
 import java.awt.*;
 
+import com.mojang.blaze3d.platform.GlStateManager;
+
+import net.minecraft.item.DyeColor;
 import net.minecraft.util.math.MathHelper;
 
 import org.apache.commons.lang3.Validate;
 
 public class ColorHelper {
 
-    /*public static int getRGB(DyeColor color) {
+    public static int getRGB(DyeColor color) {
         return color.getColorValue() | 0xFF000000;
     }
 
     public static int getRGB(DyeColor color, int alpha) {
         return getRGB(getRGB(color), alpha);
-    }*/
+    }
 
     public static int getRGB(int color, int alpha) {
         Validate.isTrue(alpha >= 0 && alpha <= 255, "alpha out of range " + alpha);
@@ -29,9 +32,9 @@ public class ColorHelper {
         return getRGB(red, green, blue, 0xFF);
     }
 
-    /*public static void glColor(int color) {
-        GlStateManager.color(getRed(color) / 255f, getGreen(color) / 255f, getBlue(color) / 255f, getAlpha(color) / 255f);
-    }*/
+    public static void glColor(int color) {
+        GlStateManager.color4f(getRed(color) / 255f, getGreen(color) / 255f, getBlue(color) / 255f, getAlpha(color) / 255f);
+    }
 
     public static int getRed(int color) {
         return ((0xFF000000 | color) >> 16) & 0xFF;

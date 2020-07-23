@@ -9,6 +9,7 @@ import com.google.common.collect.MapMaker;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.IItemHandlerModifiable;
 
 public class InventoryWrapper {
 
@@ -53,6 +54,18 @@ public class InventoryWrapper {
     }
 
     public ItemStack getStackInSlot(int index) {
-        return itemHandler != null ? itemHandler.getStackInSlot(index) : inventory.getStackInSlot(index);
+        return isItemHandler() ? itemHandler.getStackInSlot(index) : inventory.getStackInSlot(index);
+    }
+
+    public void setStackInSlot(int index, ItemStack stack) {
+        if (isItemHandler()) {
+            if (itemHandler instanceof IItemHandlerModifiable) {
+                ((IItemHandlerModifiable) itemHandler).setStackInSlot(index, stack);
+            } else {
+                throw new IllegalArgumentException(itemHandler + " is not modifiable");
+            }
+        } else {
+            inventory.setInventorySlotContents(index, stack);
+        }
     }
 }

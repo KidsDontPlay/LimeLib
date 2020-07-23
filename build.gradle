@@ -64,6 +64,7 @@ repositories {
 
 dependencies {
     minecraft "net.minecraftforge:forge:${props.get('mc_version')}-${props.get('forge_version')}"
+    //deobfCompile "mcp.mobius.waila:Hwyla:${props.get('hwyla_version')}"
 }
 
 def reobfFile = file("$buildDir/reobfJar/output.jar")

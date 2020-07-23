@@ -208,13 +208,13 @@ public class NBTHelper {
                     return new IntNBT((int) value);
                 case 11:
                 case 12:
-                    return new IntNBT(Float.floatToRawIntBits((float) value));
+                    return new FloatNBT((float) value);
                 case 13:
                 case 14:
                     return new LongNBT((long) value);
                 case 15:
                 case 16:
-                    return new LongNBT(Double.doubleToRawLongBits((double) value));
+                    return new DoubleNBT((double) value);
                 default:
                     throw new RuntimeException("primitives2");
                 }
@@ -240,13 +240,13 @@ public class NBTHelper {
                     return ((IntNBT) nbt).getInt();
                 case 11:
                 case 12:
-                    return Float.intBitsToFloat(((IntNBT) nbt).getInt());
+                    return ((FloatNBT) nbt).getFloat();
                 case 13:
                 case 14:
                     return ((LongNBT) nbt).getLong();
                 case 15:
                 case 16:
-                    return Double.longBitsToDouble(((LongNBT) nbt).getLong());
+                    return ((DoubleNBT) nbt).getDouble();
                 default:
                     throw new RuntimeException("primitives2");
                 }
